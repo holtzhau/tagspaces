@@ -27,12 +27,16 @@ define(function (require, exports, module) {
         "isWindowMaximized": false,
         "showMainMenu": true,
         "lastOpenedLocation": "",
-        "ootbPerspectives": ['perspectiveList', 'perspectiveGrid', 'perspectiveGraph'],
+        "ootbPerspectives": ['perspectiveList', 'perspectiveGrid', 'perspectiveGraph', 'perspectiveHealth'],
         "ootbViewers": [ "viewerBrowser", "viewerMD", "viewerImage", "viewerPDF", "editorText", "viewerText", "editorODF"  ],
         "ootbEditors": [ "editorHTML", "editorText", "editorODF" ],
         "perspectives": [
+            { "id": "perspectiveCard" }, // ID should be equal to the directory name where the extension is located
             { "id": "perspectiveList" }, // ID should be equal to the directory name where the extension is located
-            { "id": "perspectiveGrid" }
+            { "id": "perspectiveGrid" },
+            { "id": "perspectiveHealth" },
+            { "id": "perspectiveGraph" },
+            { "id": "perspectiveOCRO" },
         ],
         "interfaceLanguage": "en",
         "supportedLanguages": [

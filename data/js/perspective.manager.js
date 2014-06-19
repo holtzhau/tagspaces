@@ -246,6 +246,7 @@ var changePerspective = function (viewType) {
         TSCORE.currentView = viewType;          
     }      
        
+    TSCORE.currentView = perspectives[0].ID;       
     if(TSCORE.currentView == undefined) {
         TSCORE.showAlertDialog("No Perspectives found","");
         return false;

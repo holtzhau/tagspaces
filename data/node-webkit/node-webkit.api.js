@@ -51,7 +51,7 @@ define(function(require, exports, module) {
         var aboutMenu = new gui.Menu();
         var viewMenu = new gui.Menu();
         var win = gui.Window.get();
-
+        win.maximize();
         // TODO Clear the menu on reload
         if(TSCORE.Config.getShowMainMenu()) {
             aboutMenu.append(new gui.MenuItem({
@@ -121,23 +121,27 @@ define(function(require, exports, module) {
         }
     };
 
-    function scanDirectory(dirPath, index) {
+    function scanDirectory(dirPath, index, directoriesOnly) {
+        directoriesOnly = directoriesOnly || false;
         try {
             var dirList = fs.readdirSync(dirPath);
             var path, stats;
             for (var i=0; i < dirList.length; i++) {
                 path = dirPath+TSCORE.dirSeparator+dirList[i];
                 stats = fs.statSync(path);
+                var isDir = stats.isDirectory();
                 //console.log('stats: ' + JSON.stringify(stats));
-                index.push({
-                    "name": dirList[i],
-                    "isFile": !stats.isDirectory(),
-                    "size": stats.size,
-                    "lmdt": stats.mtime,
-                    "path": path  
-                });     
+                if (!directoriesOnly || isDir) {
+                    index.push({
+                        "name": dirList[i],
+                        "isFile": !stats.isDirectory(),
+                        "size": stats.size,
+                        "lmdt": stats.mtime,
+                        "path": path  
+                    });     
+                }
                 if (stats.isDirectory()) {
-                    scanDirectory(path, index);
+                    scanDirectory(path, index, directoriesOnly);
                 }                        
             }        
             return index;
@@ -145,7 +149,7 @@ define(function(require, exports, module) {
             console.error("Scanning directory "+dirPath+" failed "+ex);
         }
     }
-
+   
     function generateDirectoryTree(dirPath) {
         try {
             var tree = {}; 
@@ -491,6 +495,7 @@ define(function(require, exports, module) {
     exports.deleteDirectory              = deleteDirectory;
     exports.createDirectoryIndex         = createDirectoryIndex;
     exports.createDirectoryTree          = createDirectoryTree;
+    exports.scanDirectory               = scanDirectory;
     exports.selectDirectory              = selectDirectory;
     exports.openDirectory                = openDirectory;
     exports.openFile                     = openFile;
