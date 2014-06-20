@@ -16,7 +16,7 @@ define(function(require, exports, module) {
     console.log("Loading "+extensionID);
 	
 	var TSCORE = require("tscore");
-    var extensionDirectory = TSCORE.Config.getExtensionPath()+"/"+extensionID;
+    var extensionDirectory = TSCORE.Config.getExtensionPath() + "/" + extensionID;
     var UI;
 
 	var init = function () {
@@ -39,17 +39,18 @@ define(function(require, exports, module) {
 			$("#"+extensionID+"IncludeSubDirsButton").hide();
 		}
         var index = [];
-        TSCORE.IO.scanDirectory(TSCORE.currentPath, index, true);
+        TSCORE.IO.scanDirectory(TSCORE.currentPath, index, true, 1);
         console.log(index);
         _.each(index, function (value) { 
             fs.watch(value["path"], function (event, filename) {
-              console.log('event is: ' + event);
-              if (filename) {
-                console.log('filename provided: ' + filename);
-                TSCORE.navigateToDirectory(TSCORE.currentPath);
-              } else {
-                console.log('filename not provided');
-              }
+                console.log('event is: ' + event + ", " + filename);
+                if (filename) {
+                    console.log('filename provided: ' + filename);
+                    // TSCORE.navigateToDirectory(TSCORE.currentPath);
+                    TSCORE.IO.createDirectoryIndex(TSCORE.currentPath);
+                } else {
+                    console.log('filename not provided');
+                }
             });
         });
 	};	

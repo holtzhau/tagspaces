@@ -121,8 +121,9 @@ define(function(require, exports, module) {
         }
     };
 
-    function scanDirectory(dirPath, index, directoriesOnly) {
-        directoriesOnly = directoriesOnly || false;
+    function scanDirectory(dirPath, index, directoriesOnly, level) {
+        directoriesOnly = typeof directoriesOnly !== 'undefined' ? directoriesOnly: false;
+        level = typeof level !== 'undefined' ? level: -1;
         try {
             var dirList = fs.readdirSync(dirPath);
             var path, stats;
@@ -140,9 +141,12 @@ define(function(require, exports, module) {
                         "path": path  
                     });     
                 }
-                if (stats.isDirectory()) {
-                    scanDirectory(path, index, directoriesOnly);
-                }                        
+                if (level > 0) {
+                    level--;
+                }
+                if (stats.isDirectory() && ((level == -1) || (level > 0))) {
+                    scanDirectory(path, index, directoriesOnly, level);
+                }
             }        
             return index;
         } catch(ex) {
@@ -186,14 +190,15 @@ define(function(require, exports, module) {
         //TSPOSTIO.
     }; */
     
-    var createDirectoryIndex = function(dirPath) {
+    var createDirectoryIndex = function(dirPath, display) {
+        display = typeof display !== 'undefined' ? display: true;
         console.log("Creating index for directory: "+dirPath);
         TSCORE.showLoadingAnimation();  
         
         var directoryIndex = [];
         directoryIndex = scanDirectory(dirPath, directoryIndex);
         //console.log(JSON.stringify(directoryIndex));
-        TSPOSTIO.createDirectoryIndex(directoryIndex);
+        TSPOSTIO.createDirectoryIndex(directoryIndex, display);
     };
     
     var createDirectoryTree = function(dirPath) {

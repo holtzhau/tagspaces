@@ -364,9 +364,9 @@
     };   
     
     var getPerspectives = function() {
-        // if(exports.Settings.perspectives === undefined) {
+        if(exports.Settings.perspectives === undefined) {
             exports.Settings.perspectives = exports.DefaultSettings.perspectives;
-        // }
+        }
         return exports.Settings.perspectives;
     };
 

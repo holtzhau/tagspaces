@@ -185,9 +185,10 @@ var updateTreeData = function (treeData) {
     }
 };
 
-var updateFileBrowserData = function(dirList) {
+var updateFileBrowserData = function(dirList, display) {
     console.log("Updating the file browser data...");
-    
+    display = typeof display !== 'undefined' ? display: true;
+ 
     TSCORE.fileList = [];
     var tags,
         ext,
@@ -217,7 +218,9 @@ var updateFileBrowserData = function(dirList) {
             }
         }
     }    
-    changePerspective(TSCORE.currentView); 
+    if (display) {
+        changePerspective(TSCORE.currentView); 
+    }
 };
 
 var refreshFileListContainer = function() {

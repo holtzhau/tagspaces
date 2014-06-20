@@ -9,9 +9,10 @@ define(function(require, exports, module) {
 
     var TSCORE = require("tscore");
     
-    exports.createDirectoryIndex = function(directoryIndex) {
+    exports.createDirectoryIndex = function(directoryIndex, display) {
         console.log("Directory index created");
-        TSCORE.PerspectiveManager.updateFileBrowserData(directoryIndex);
+        display = typeof display !== 'undefined' ? display: true;
+        TSCORE.PerspectiveManager.updateFileBrowserData(directoryIndex, display);
         //TSCORE.hideLoadingAnimation();        
     };   
     

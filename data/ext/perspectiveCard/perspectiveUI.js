@@ -61,11 +61,11 @@ console.log("Loading UI for perspectiveDefault");
                 <div class="area">\
                 <div class="portlet">\
                 <div class="portlet-header">{{title}}</div>\
-                <div class="portlet-content">Lorem ipsum dolor sit amet, consectetuer adipiscing elit</div>\
+                <div class="portlet-content">{{content}}</div>\
             </div>\
         </div>');
 
-    var fileTileTmpl = Handlebars.compile('\
+    var tileTemplate = Handlebars.compile('\
             <div class="column">\
                 <div class="portlet-header">{{folder}}</div>\
                 <div class="area">\
@@ -74,7 +74,7 @@ console.log("Loading UI for perspectiveDefault");
                         <div class="portlet-header">{{title}}\
                         <div class="hiddenpath">{{filepath}}</div>\
                         </div>\
-                        <div class="portlet-content">{{folder}} Lorem ipsum dolor sit amet, consectetuer adipiscing elit</div>\
+                        <div class="portlet-content"><b>{{folder}}</b> {{content}} </div>\
                     </div>\
                 {{/each}}\
                 </div>\
@@ -99,16 +99,15 @@ console.log("Loading UI for perspectiveDefault");
         item.data("move_handler", move_handler);
     }   
 
-    ExtUI.prototype.createFolderTile = function(value) {
+    ExtUI.prototype.createFolderTile = function(path, name, value) {
         //TODO minimize platform specific calls     
-        console.log(value[0][TSCORE.fileListFILEPATH]);
-        var filePath = pathUtils.dirname(value[0][TSCORE.fileListFILEPATH]);
-        var folder = pathUtils.basename(filePath);
+        var filePath = path;
+        var folder = name;
         var tmbPath = undefined;
         if(isCordova || isWeb) {
             tmbPath = filePath;            
         } else {
-            tmbPath = "file:///" + filePath;  
+            tmbPath = "file:///" + filePath; 
         }       
 
         var context = {
@@ -125,6 +124,7 @@ console.log("Loading UI for perspectiveDefault");
             context.files.push({title: value[i][TSCORE.fileListTITLE], 
                 filepath: value[i][TSCORE.fileListFILEPATH],
                 folder: pathUtils.basename(pathUtils.dirname(value[i][TSCORE.fileListFILEPATH])),
+                content: "",
             });
         }    
         // XXX sort
@@ -145,10 +145,20 @@ console.log("Loading UI for perspectiveDefault");
         //     }   
         // }
 
-        var template = fileTileTmpl(context);
+        var template = tileTemplate(context);
         return template;
     };    
     
+    ExtUI.prototype.selectFile = function(uiElement, filePath) {
+        // $(uiElement).parent().parent().toggleClass("ui-selected");
+        // $(uiElement).parent().parent().find(".fileSelection").find("i")
+        //     .toggleClass("fa-check-square")
+        //     .toggleClass("fa-square-o");   
+        TSCORE.PerspectiveManager.clearSelectedFiles();
+        TSCORE.selectedFiles.push(filePath);
+        this.handleElementActivation();
+    };
+
     ExtUI.prototype.initFileGroupingMenu = function () {
         var self = this;
         
@@ -430,9 +440,15 @@ console.log("Loading UI for perspectiveDefault");
         // Clear old data
         this.viewContainer.children().remove();
         this.viewFooter.children().remove();
+        this.viewContainer.css('padding', '10');
 
         TSCORE.IO.createDirectoryIndex(TSCORE.currentPath, false);
-        this.viewContainer.addClass("accordion");
+        var folder_index = [];
+        TSCORE.IO.scanDirectory(TSCORE.currentPath, folder_index, true, 1);
+        var folders = _.map(folder_index, function (value) { return [value.name, value.path] })
+        console.log("folders")
+        console.log(folders)
+        // this.viewContainer.addClass("accordion");
         // $( this.extensionID+"IncludeSubDirsButton" ).prop('disabled', false); 
         
         var self = this;
@@ -441,84 +457,120 @@ console.log("Loading UI for perspectiveDefault");
 
         this.searchResults = TSCORE.Search.searchData(TSCORE.fileList, TSCORE.Search.nextQuery);
         var grouping = self.calculateGrouping(this.searchResults);
-        console.log("s");
-        console.log(grouping);
         var i = 0;
-        _.each(grouping, function (value) { 
+        // self.viewContainer.append($("<div>", { 
+        //     "class": "accordion-group disableTextSelection",    
+        //     "style": "width: 100%; border: 0px #aaa solid;"
+        // })
+        // .append($("<div>", { 
+        //     "class":  "accordion-heading  btn-group",
+        //     "style":  "width:100%; margin: 0px; border-bottom: solid 1px #eee; background-color: #ddd;"
+        // })
+        
+        // .append($("<button>", { // Grouped content toggle button
+        //             "class":        "btn btn-link groupTitle",
+        //             "data-toggle":  "collapse",
+        //             "data-target":  "#"+self.extensionID+"sortingButtons"+i,
+        //             "title":        "Toggle Group"
+        //         }  
+        //     )
+        //     .html("<i class='fa fa-minus-square' /i>&nbsp;")
+        //     .click(function() {
+        //         $(this).find('i').toggleClass("fa-minus-square").toggleClass("fa-plus-square");
+        //     })   
+        // )// End date toggle button  
+                                
+        // .append($("<span>", {
+        //     "class":        "btn btn-link groupTitle",
+        //    // "data-toggle":  "collapse",
+        //    // "data-target":  "#"+self.extensionID+"sortingButtons"+i,                
+        //     "style":        "margin-left: 0px; padding-left: 0px;",
+        //     "text":        "no grouping" 
+        //     })  
+        // )
+        
+        // ) // end heading
+        
+        // .append($("<div>", { 
+        //     "class":   "accordion-body collapse in",
+        //     "id":      self.extensionID+"sortingButtons"+i,
+        //     "style":   "margin: 0px 0px 0px 3px; border: 0px;"
+        // })          
+        // .append($("<div>", { 
+        //     "class":   "accordion-inner",
+        //     "id":      self.extensionID+"sortingButtonsContent"+i,
+        //     "style":   "padding: 2px; border: 0px;"
+        // })
+        // ) // end accordion-inner    
+        // ) // end accordion button        
+
+        // ); // end group
+        // var groupedContent = $("<ol>", {
+        //     style: "overflow: visible;",
+        //     class: "selectableFiles"
+        // }).appendTo( "#"+self.extensionID+"sortingButtonsContent"+i ); 
+        // _.each(grouping, function (value) { 
+        for (var group in folders) {
+            var folder = folders[group][0]
+            var path = folders[group][1]
+            var files
+            if (folder in grouping) {
+                files = grouping[folder];
+            } else {
+                files = []
+            }
+
             i++;
-            var groupingTitle = self.calculateGroupTitle(value[0]);
-            
-            self.viewContainer.append($("<div>", { 
-                "class": "accordion-group disableTextSelection",    
-                "style": "width: 100%; border: 0px #aaa solid;"
-            })
-            .append($("<div>", { 
-                "class":  "accordion-heading  btn-group",
-                "style":  "width:100%; margin: 0px; border-bottom: solid 1px #eee; background-color: #ddd;"
-            })
-            
-            .append($("<button>", { // Grouped content toggle button
-                        "class":        "btn btn-link groupTitle",
-                        "data-toggle":  "collapse",
-                        "data-target":  "#"+self.extensionID+"sortingButtons"+i,
-                        "title":        "Toggle Group"
-                    }  
-                )
-                .html("<i class='fa fa-minus-square' /i>&nbsp;")
-                .click(function() {
-                    $(this).find('i').toggleClass("fa-minus-square").toggleClass("fa-plus-square");
-                })   
-            )// End date toggle button  
-                                    
-            .append($("<span>", {
-                "class":        "btn btn-link groupTitle",
-               // "data-toggle":  "collapse",
-               // "data-target":  "#"+self.extensionID+"sortingButtons"+i,                
-                "style":        "margin-left: 0px; padding-left: 0px;",
-                "text":         groupingTitle
-                })  
-            )
-            
-            ) // end heading
-            
-            .append($("<div>", { 
-                "class":   "accordion-body collapse in",
-                "id":      self.extensionID+"sortingButtons"+i,
-                "style":   "margin: 0px 0px 0px 3px; border: 0px;"
-            })          
-            .append($("<div>", { 
-                "class":   "accordion-inner",
-                "id":      self.extensionID+"sortingButtonsContent"+i,
-                "style":   "padding: 2px; border: 0px;"
-            })
-            ) // end accordion-inner    
-            ) // end accordion button        
-
-            ); // end group
-
-            var groupedContent = $("<ol>", {
-                style: "overflow: visible;",
-                class: "selectableFiles"
-            }).appendTo( "#"+self.extensionID+"sortingButtonsContent"+i ); 
+            // var groupingTitle = self.calculateGroupTitle(folder, path, files[0]);
             
             // Sort the files in group by name
             // value = _.sortBy(value, function(entry) { 
             //         return entry[TSCORE.fileListFILENAME];
-            //     });                                         
-
-            value = _.sortBy(value, function(entry) { 
-                                var filePath = pathUtils.dirname(entry[0][TSCORE.fileListFILEPATH]);
-                                var folder = pathUtils.basename(filePath);
-                                return folder;
-                            });             
+                //     });                                         
+            
+            //XXX fix
+            // files = _.sortBy(files, function(entry) { 
+            //                     var filePath = pathUtils.dirname(entry[0][TSCORE.fileListFILEPATH]);
+            //                     var folder = pathUtils.basename(filePath);
+            //                     return folder;
+            //                 });             
             console.log('group');
-            console.log(value);
+            console.log(files);
+            self.viewContainer.append(self.createFolderTile(path, folder, files));
 
             // Iterating over the files in group 
-            for(var j=0; j < value.length; j++) {
-                groupedContent.append(self.createFolderTile(value[j]));
-            } 
-            $('.hiddenpath').hide(); 
+            // for(var j=0; j < files.length; j++) {
+            //     groupedContent.append(self.createFolderTile(files[j]));
+            // } 
+            
+             //    .hammer().on("doubletap", function() {
+             //        var card_path = $(this).find(".hiddenpath")[0].textContent;                
+             //        console.log("Doubletap & Opening file..." + card_path);
+             //        TSCORE.FileOpener.openFile(card_path);
+             //    // self.selectFile(titleBut, $(titleBut).attr("filepath"));
+             // });  
+            // Adding event listeners
+            self.viewContainer.find(".fileTile").each(function() {
+                self.assignFileTileHandlers($(this));
+            });
+            
+            // Disabling the file tile selection
+            /* $( "#"+self.extensionID+"sortingButtonsContent"+i ).selectable({
+                start: function() {
+                    TSCORE.PerspectiveManager.clearSelectedFiles();   
+                },                
+                stop: function() {
+                    TSCORE.selectedFiles = [];          
+                    $( ".ui-selected", this ).each(function() {
+                        TSCORE.selectedFiles.push($(this).attr("filepath"));
+                    });
+                    console.log("Selected files: "+TSCORE.selectedFiles);
+                    self.handleElementActivation();
+                }
+            });  */          
+        // });  
+        }
+        $('.hiddenpath').hide(); 
             $(".area" ).sortable({
                     connectWith: ".area",
                     handle: ".portlet-header",
@@ -541,32 +593,17 @@ console.log("Loading UI for perspectiveDefault");
                     }
                 });  
         
-            $( ".portlet" )
-                .addClass( "ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" )
-                .find( ".portlet-header" )
-                .addClass( "ui-widget-header ui-corner-all" )
-                .prepend( "<span class='ui-icon ui-icon-minusthick portlet-toggle'></span>");  
-            // Adding event listeners
-            groupedContent.find(".fileTile").each(function() {
-                self.assignFileTileHandlers($(this));
-            });
-            
-            // Disabling the file tile selection
-            /* $( "#"+self.extensionID+"sortingButtonsContent"+i ).selectable({
-                start: function() {
-                    TSCORE.PerspectiveManager.clearSelectedFiles();   
-                },                
-                stop: function() {
-                    TSCORE.selectedFiles = [];          
-                    $( ".ui-selected", this ).each(function() {
-                        TSCORE.selectedFiles.push($(this).attr("filepath"));
-                    });
-                    console.log("Selected files: "+TSCORE.selectedFiles);
-                    self.handleElementActivation();
-                }
-            });  */          
-        });  
-
+        $( ".portlet" )
+            .addClass( "ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" )
+            .find( ".portlet-header" )
+            .addClass( "ui-widget-header ui-corner-all" )
+            .prepend( "<span class='ui-icon ui-icon-minusthick portlet-toggle'></span>")
+        $( ".portlet" ).hammer().on("doubletap", function() {
+                    var card_path = $(this).find(".hiddenpath")[0].textContent;                
+                    console.log("Doubletap & Opening file..." + card_path);
+                    TSCORE.FileOpener.openFile(card_path);
+                // self.selectFile(titleBut, $(titleBut).attr("filepath"));
+             });  
         // Enable all buttons    
         this.viewToolbar.find(".btn").prop('disabled', false);
         // Disable certain buttons again    
