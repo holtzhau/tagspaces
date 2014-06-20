@@ -12,7 +12,7 @@ console.log("Loading UI for perspectiveDefault");
 
     var MONTH = [ "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December" ];
 
-    var PREVIEW_TAGS_CNT = 5;
+    var PREVIEW_TAGS_CNT = 3;
 
     var supportedFileTypeThumnailing = ['jpg','jpeg','png','gif'];
 
@@ -24,7 +24,8 @@ console.log("Loading UI for perspectiveDefault");
         this.viewToolbar = $("#"+this.extensionID+"Toolbar").empty();
         this.viewFooter = $("#"+this.extensionID+"Footer").empty();
 
-        this.currentGrouping = ""; // tagchain, day, month, year
+        this.currentGrouping = "folder"; // tagchain, day, month, year
+        // this.currentGrouping = ""; // tagchain, day, month, year
         this.thumbEnabled = false;
         this.currentTmbSize = 0;
         this.searchResults = undefined;    
@@ -54,7 +55,7 @@ console.log("Loading UI for perspectiveDefault");
                </span><span class="fileExtTile">{{fileext}}</span>\
                <button class="btn btn-link fileTileSelector" filepath="{{filepath}}"><i class="fa fa-square-o"></i></button></p></li>');
 
-    var fileTileTmpl = Handlebars.compile('\
+    var fileTileTmpl2 = Handlebars.compile('\
             <div class="column">\
                 <div class="portlet-header">{{folder}}</div>\
                 <div class="area">\
@@ -62,6 +63,22 @@ console.log("Loading UI for perspectiveDefault");
                 <div class="portlet-header">{{title}}</div>\
                 <div class="portlet-content">Lorem ipsum dolor sit amet, consectetuer adipiscing elit</div>\
             </div>\
+        </div>');
+
+    var fileTileTmpl = Handlebars.compile('\
+            <div class="column">\
+                <div class="portlet-header">{{folder}}</div>\
+                <div class="area">\
+                {{#each files}}\
+                    <div class="portlet">\
+                        <div class="portlet-header">{{title}}\
+                        <div class="hiddenpath">{{filepath}}</div>\
+                        </div>\
+                        <div class="portlet-content">{{folder}} Lorem ipsum dolor sit amet, consectetuer adipiscing elit</div>\
+                    </div>\
+                {{/each}}\
+                </div>\
+               <div class="hiddenpath">{{filepath}}</div>\
         </div>');
   
 
@@ -82,39 +99,51 @@ console.log("Loading UI for perspectiveDefault");
         item.data("move_handler", move_handler);
     }   
 
-    ExtUI.prototype.createFileTile = function(title, filePath, fileExt, fileTags) {
+    ExtUI.prototype.createFolderTile = function(value) {
         //TODO minimize platform specific calls     
+        console.log(value[0][TSCORE.fileListFILEPATH]);
+        var filePath = pathUtils.dirname(value[0][TSCORE.fileListFILEPATH]);
+        var folder = pathUtils.basename(filePath);
         var tmbPath = undefined;
         if(isCordova || isWeb) {
             tmbPath = filePath;            
         } else {
-            tmbPath = "file:///"+filePath;  
+            tmbPath = "file:///" + filePath;  
         }       
-        
+
         var context = {
                 filepath: filePath, 
-                folder: pathUtils.basename(pathUtils.dirname(filePath)),
+                folder: folder, 
                 tmbpath: tmbPath, 
-                fileext: fileExt, 
-                title: title,
-                tags : []    
+                // fileext: fileExt, 
+                files: [], 
+                title: folder,
+                // tags : []    
         };
         
-        if(fileTags.length > 0) {
-            var tagString = ""+fileTags ;
-            var tags = tagString.split(",");
+        for (var i=0; i < value.length; i++) { 
+            context.files.push({title: value[i][TSCORE.fileListTITLE], 
+                filepath: value[i][TSCORE.fileListFILEPATH],
+                folder: pathUtils.basename(pathUtils.dirname(value[i][TSCORE.fileListFILEPATH])),
+            });
+        }    
+        // XXX sort
 
-            var tagCounter = 0;
-            if (tags.length > PREVIEW_TAGS_CNT) {
-                tagCounter = PREVIEW_TAGS_CNT+1;
-                tags[PREVIEW_TAGS_CNT] = "...";
-            } else {
-                tagCounter = tags.length;                
-            }
-            for (var i=0; i < tagCounter; i++) { 
-                context.tags.push({tag: tags[i], filepath: filePath, style: TSCORE.generateTagStyle(TSCORE.Config.findTag(tags[i]))});
-            }   
-        }
+        // if(fileTags.length > 0) {
+        //     var tagString = ""+fileTags ;
+        //     var tags = tagString.split(",");
+
+        //     var tagCounter = 0;
+        //     if (tags.length > PREVIEW_TAGS_CNT) {
+        //         tagCounter = PREVIEW_TAGS_CNT+1;
+        //         tags[PREVIEW_TAGS_CNT] = "...";
+        //     } else {
+        //         tagCounter = tags.length;                
+        //     }
+        //     for (var i=0; i < tagCounter; i++) { 
+        //         context.tags.push({tag: tags[i], filepath: filePath, style: TSCORE.generateTagStyle(TSCORE.Config.findTag(tags[i]))});
+        //     }   
+        // }
 
         var template = fileTileTmpl(context);
         return template;
@@ -353,6 +382,16 @@ console.log("Loading UI for perspectiveDefault");
                     });
                 break;                
             }            
+            case "folder": {
+                data = _.groupBy( data, function(value){ 
+                        var folder = pathUtils.basename(pathUtils.dirname(value[TSCORE.fileListFILEPATH]))
+                        return folder; 
+                    });
+                return data;
+                // console.log(data);
+                // return data;
+                // break;
+            }
             default : {
                 var grouped = false;
                 this.supportedGroupings.forEach(function(grouping) {
@@ -371,14 +410,13 @@ console.log("Loading UI for perspectiveDefault");
                     }
                 });                            
                 if(!grouped) {
-                    data = _.groupBy( data, function(){
+                    data = _.groupBy( data, function() {
                               return true;
                     });                    
                 }
                 break;                            
             }
         }
- 
         // Sort groups by date
         data = _.sortBy(data, function(value) { 
                 var tmpDate = new Date(value[0][TSCORE.fileListFILELMDT]);    
@@ -389,24 +427,25 @@ console.log("Loading UI for perspectiveDefault");
     };
 
     ExtUI.prototype.reInit = function() {
-     
         // Clear old data
         this.viewContainer.children().remove();
         this.viewFooter.children().remove();
 
+        TSCORE.IO.createDirectoryIndex(TSCORE.currentPath, false);
         this.viewContainer.addClass("accordion");
-        $( this.extensionID+"IncludeSubDirsButton" ).prop('disabled', false); 
+        // $( this.extensionID+"IncludeSubDirsButton" ).prop('disabled', false); 
         
         var self = this;
 
         // Load new filtered data
-        this.searchResults = TSCORE.Search.searchData(TSCORE.fileList, TSCORE.Search.nextQuery);
 
-        var i=0;
-        _.each(self.calculateGrouping(this.searchResults), function (value) { 
+        this.searchResults = TSCORE.Search.searchData(TSCORE.fileList, TSCORE.Search.nextQuery);
+        var grouping = self.calculateGrouping(this.searchResults);
+        console.log("s");
+        console.log(grouping);
+        var i = 0;
+        _.each(grouping, function (value) { 
             i++;
-            console.log(value);
-            
             var groupingTitle = self.calculateGroupTitle(value[0]);
             
             self.viewContainer.append($("<div>", { 
@@ -463,20 +502,24 @@ console.log("Loading UI for perspectiveDefault");
             }).appendTo( "#"+self.extensionID+"sortingButtonsContent"+i ); 
             
             // Sort the files in group by name
+            // value = _.sortBy(value, function(entry) { 
+            //         return entry[TSCORE.fileListFILENAME];
+            //     });                                         
+
             value = _.sortBy(value, function(entry) { 
-                    return entry[TSCORE.fileListFILENAME];
-                });                                         
+                                var filePath = pathUtils.dirname(entry[0][TSCORE.fileListFILEPATH]);
+                                var folder = pathUtils.basename(filePath);
+                                return folder;
+                            });             
+            console.log('group');
+            console.log(value);
 
             // Iterating over the files in group 
             for(var j=0; j < value.length; j++) {
-               groupedContent.append(self.createFileTile(
-                     value[j][TSCORE.fileListTITLE],
-                     value[j][TSCORE.fileListFILEPATH],
-                     value[j][TSCORE.fileListFILEEXT],
-                     value[j][TSCORE.fileListTAGS]
-                 ));
-
-               $(".area" ).sortable({
+                groupedContent.append(self.createFolderTile(value[j]));
+            } 
+            $('.hiddenpath').hide(); 
+            $(".area" ).sortable({
                     connectWith: ".area",
                     handle: ".portlet-header",
                     cancel: ".portlet-toggle",
@@ -488,16 +531,21 @@ console.log("Loading UI for perspectiveDefault");
                         ui.item.removeClass("tilt");
                         $("html").unbind('mousemove', ui.item.data("move_handler"));
                         ui.item.removeData("move_handler");
+                        // console.log(event.target.lastElementChild.textContent);
+                    },
+                    receive: function (event, ui) {
+                        var source = event.toElement.lastElementChild.textContent;
+                        var destination = event.target.nextElementSibling.textContent;
+                        destination = pathUtils.join(destination, pathUtils.basename(source));
+                        TSCORE.IO.renameFile(source, destination);
                     }
                 });  
         
-                $( ".portlet" )
-                    .addClass( "ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" )
-                    .find( ".portlet-header" )
-                    .addClass( "ui-widget-header ui-corner-all" )
-                    .prepend( "<span class='ui-icon ui-icon-minusthick portlet-toggle'></span>"); 
-            } 
-            
+            $( ".portlet" )
+                .addClass( "ui-widget ui-widget-content ui-helper-clearfix ui-corner-all" )
+                .find( ".portlet-header" )
+                .addClass( "ui-widget-header ui-corner-all" )
+                .prepend( "<span class='ui-icon ui-icon-minusthick portlet-toggle'></span>");  
             // Adding event listeners
             groupedContent.find(".fileTile").each(function() {
                 self.assignFileTileHandlers($(this));
@@ -686,9 +734,10 @@ console.log("Loading UI for perspectiveDefault");
             $fileTile = $("#"+this.extensionID+"Container li[filepath='"+oldFilePath+"']");
         }   
 
-        $fileTile.replaceWith(this.createFileTile(title, newFilePath, fileExt, fileTags));
+        $fileTile.replaceWith(this.createFolderTile(title, newFilePath, fileExt, fileTags));
         this.refreshThumbnails();
         this.assignFileTileHandlers($fileTile);
+
     };    
     
     ExtUI.prototype.getNextFile = function(filePath) {
